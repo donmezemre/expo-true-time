@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-true-time": ["../src/index"],
+      "expo-true-time/*": ["../src/*"]
+    }
+  }
+}

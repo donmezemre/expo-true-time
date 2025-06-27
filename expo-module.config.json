@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ExpoTrueTimeModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.truetime.ExpoTrueTimeModule"]
+  }
+}
