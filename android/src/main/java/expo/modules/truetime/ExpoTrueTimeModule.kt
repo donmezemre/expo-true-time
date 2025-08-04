@@ -1,50 +1,109 @@
 package expo.modules.truetime
 
+import android.os.SystemClock
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.net.URL
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.*
 
 class ExpoTrueTimeModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
-  override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoTrueTime')` in JavaScript.
-    Name("ExpoTrueTime")
+    private var baseUtcTimeMillis: Long? = null
+    private var baseElapsedRealtime: Long? = null
+    override fun definition() = ModuleDefinition {
+        Name("ExpoTrueTime")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
-    )
+        Function("setBaseUtcTime") { utcTimeMillis: Long ->
+            baseUtcTimeMillis = utcTimeMillis
+            baseElapsedRealtime = SystemClock.elapsedRealtime()
+        }
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+        Function("getEstimatedTimeUtc") {
+            val baseTime = baseUtcTimeMillis
+            val baseUptime = baseElapsedRealtime
 
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
+            if (baseTime == null || baseUptime == null) return@Function null
+
+            val currentUptime = SystemClock.elapsedRealtime()
+            val elapsed = currentUptime - baseUptime
+            val estimatedTimeMillis = baseTime + elapsed
+
+            // ISO 8601 UTC String döndür
+            java.time.Instant.ofEpochMilli(estimatedTimeMillis).toString()
+        }
+
+        Function("getNtpTime") {
+            return@Function getNtpTime()
+        }
+
+        Function("getNtpTimeMs") {
+            return@Function getNtpTimeMs() // returns Long? → JS tarafında ms olarak alınır
+        }
+
+
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
+    private fun getNtpTime(): String {
+        val address = InetAddress.getByName("time.google.com")
+        val buffer = ByteArray(48)
+        buffer[0] = 0b00100011 // NTP mode 3 (client), version 4
+
+        val socket = DatagramSocket()
+        socket.soTimeout = 10000
+        val request = DatagramPacket(buffer, buffer.size, address, 123)
+        socket.send(request)
+
+        val response = DatagramPacket(buffer, buffer.size)
+        socket.receive(response)
+        socket.close()
+
+        val transmitTimeSeconds = read32(buffer, 40)
+        val transmitTimeFraction = read32(buffer, 44)
+
+        val msb = transmitTimeSeconds - 2208988800L
+        val fraction = transmitTimeFraction / 4294967296.0
+        val time = (msb + fraction) * 1000.0
+
+        return Date(time.toLong()).toInstant().toString()
     }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ExpoTrueTimeView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: ExpoTrueTimeView, url: URL ->
-        view.webView.loadUrl(url.toString())
-      }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
+    private fun read32(buffer: ByteArray, offset: Int): Long {
+        val bb = ByteBuffer.wrap(buffer, offset, 4)
+        bb.order(ByteOrder.BIG_ENDIAN)
+        return bb.int.toLong() and 0xffffffffL
     }
-  }
+
+    private fun getNtpTimeMs(host: String = "time.google.com"): Long? {
+        return try {
+            val buffer = ByteArray(48)
+            buffer[0] = 0b11100011.toByte() // NTP mode 3 (client)
+
+            val address = InetAddress.getByName(host)
+            val socket = DatagramSocket()
+            socket.soTimeout = 3000
+
+            val request = DatagramPacket(buffer, buffer.size, address, 123)
+            socket.send(request)
+
+            val response = DatagramPacket(buffer, buffer.size)
+            socket.receive(response)
+            socket.close()
+
+            // Extract transmit timestamp (bytes 40..43)
+            val transmitTimeSeconds = ByteBuffer.wrap(buffer, 40, 4)
+                .order(ByteOrder.BIG_ENDIAN)
+                .int.toLong() and 0xFFFFFFFFL
+
+            // Convert seconds since 1900 to milliseconds since 1970 (Unix epoch)
+            val epochOffset = 2208988800L
+            val unixTimeSeconds = transmitTimeSeconds - epochOffset
+            unixTimeSeconds * 1000L
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 }
