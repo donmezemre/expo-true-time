@@ -43,7 +43,15 @@ class ExpoTrueTimeModule : Module() {
             return@Function getNtpTimeMs() // returns Long? → JS tarafında ms olarak alınır
         }
 
+        Function("getUpTime") {
+            return@Function getUpTime()
+        }
 
+
+    }
+
+    private fun getUpTime(): Long {
+        return SystemClock.elapsedRealtime()
     }
 
     private fun getNtpTime(): String {

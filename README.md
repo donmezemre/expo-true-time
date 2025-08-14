@@ -1,32 +1,113 @@
-# expo-true-time
+# 📦 expo-true-time — Reliable Time Synchronization for React Native (Expo)
 
-My new module
+**expo-true-time** is a library designed for reliable date-time management in React Native (Expo) projects,  
+capable of retrieving the real time from an **NTP server** and maintaining estimated UTC time **without network connectivity**.
 
-# API documentation
+It works on Android using **SystemClock.elapsedRealtime** and is only compatible with **Android devices**.
 
-- [Documentation for the latest stable release](https://docs.expo.dev/versions/latest/sdk/true-time/)
-- [Documentation for the main branch](https://docs.expo.dev/versions/unversioned/sdk/true-time/)
+---
 
-# Installation in managed Expo projects
+## 🚀 Features
 
-For [managed](https://docs.expo.dev/archive/managed-vs-bare/) Expo projects, please follow the installation instructions in the [API documentation for the latest stable release](#api-documentation). If you follow the link and there is no documentation available then this library is not yet usable within managed projects &mdash; it is likely to be included in an upcoming Expo SDK release.
+- ✅ Retrieves accurate UTC time from **Google NTP servers** (`getNtpTime`, `getNtpTimeMS`)
+- ✅ After one-time NTP synchronization, estimates time **without internet**
+- ✅ Returns UTC time in ISO format (`getNtpTime`, `getEstimatedTimeUtc`)
+- ✅ Provides UTC time as timestamp (`getNtpTimeMS`)
+- ✅ Retrieves **device uptime since boot** (`getUpTime`)
+- ✅ Compatible with **Expo & bare React Native**
 
-# Installation in bare React Native projects
+---
 
-For bare React Native projects, you must ensure that you have [installed and configured the `expo` package](https://docs.expo.dev/bare/installing-expo-modules/) before continuing.
+## 📥 Installation
 
-### Add the package to your npm dependencies
-
-```
+```bash
+# Using npm
 npm install expo-true-time
+
+# Or using yarn
+yarn add expo-true-time
 ```
 
-### Configure for Android
+---
 
+## 📄 Usage
 
+### 1️⃣ Get UTC Time from NTP (ISO String)
 
+```ts
+import { getNtpTime } from "expo-true-time";
 
+const utcString = await getNtpTime();
+console.log(utcString);
+// "2025-08-04T10:35:10.583Z"
+```
 
-# Contributing
+---
 
-Contributions are very welcome! Please refer to guidelines described in the [contributing guide]( https://github.com/expo/expo#contributing).
+### 2️⃣ Get UTC Timestamp (ms) and Use setBaseUtcTime
+
+```ts
+import { getNtpTimeMS, setBaseUtcTime } from "expo-true-time";
+
+const ntpTimestamp = await getNtpTimeMS(); // timestamp (ms)
+await setBaseUtcTime(ntpTimestamp); // set as base UTC time
+```
+
+> ⚠️ Important: `setBaseUtcTime` should be provided a **timestamp (ms)**, not an ISO string.
+
+---
+
+### 3️⃣ Get Estimated UTC Time
+
+```ts
+import { getEstimatedTimeUtc } from "expo-true-time";
+
+const estimatedUtc = await getEstimatedTimeUtc();
+console.log(estimatedUtc);
+// "2025-08-04T10:35:10.583Z"
+```
+
+---
+
+### 4️⃣ Get Device Uptime
+
+```ts
+import { getUpTime } from "expo-true-time";
+
+const upTimeMs = await getUpTime();
+console.log(upTimeMs);
+// E.g., 3600000 (1 hour in milliseconds)
+```
+
+> ⚡ Includes time while the device was awake and asleep.  
+> ⚡ Not affected by system clock changes.  
+> ⚡ Returns a **Long (ms)** value.
+
+---
+
+## ⚙️ API Reference
+
+| Method                       | Description                                                   | Parameter    | Return Type                         |
+| ---------------------------- | ------------------------------------------------------------- | ------------ | ----------------------------------- | ----- |
+| `getNtpTime()`               | Retrieves UTC time from Google NTP servers (ISO string)       | None         | `string` "YYYY-MM-DDTHH:mm:ss.sssZ" |
+| `getNtpTimeMS()`             | Retrieves UTC time as timestamp (ms) from Google NTP servers  | None         | `number` (ms)                       |
+| `setBaseUtcTime(ms: number)` | Sets a base UTC timestamp for calculating estimated UTC time  | `ms: number` | `void`                              |
+| `getEstimatedTimeUtc()`      | Returns the estimated UTC time in ISO format                  | None         | `string                             | null` |
+| `getUpTime()`                | Returns the device uptime since boot (includes awake + sleep) | None         | `number` (ms)                       |
+
+---
+
+## 📌 Notes
+
+- ⚠️ **Android devices only.**
+- **Internet is required initially** for NTP synchronization.
+  - Alternatively, you can provide a trusted source's **UTC timestamp (ms)** to `setBaseUtcTime`.
+  - Afterwards, `getEstimatedTimeUtc()` can provide estimated UTC time without network.
+- After `getNtpTimeMS()` is stored via `setBaseUtcTime`, estimated time works **offline**.
+- The library does not handle timezone conversions; it only returns **UTC time**.
+
+---
+
+## 📜 License
+
+MIT © 2025 — Emre Dönmez & Contributors
