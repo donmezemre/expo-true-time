@@ -21,3 +21,11 @@ export function setBaseUtcTime(ms: number): void {
 export function getUpTime(): number {
   return TrueTimeModule.getUpTime();
 }
+
+export function setBaseStartTime(): number {
+  return TrueTimeModule.setBaseStartTime();
+}
+
+export function getElapsedTimeSinceStart(): number {
+  return TrueTimeModule.getElapsedTimeSinceStart();
+}

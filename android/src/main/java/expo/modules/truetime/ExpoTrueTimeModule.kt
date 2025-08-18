@@ -13,6 +13,7 @@ import java.util.*
 class ExpoTrueTimeModule : Module() {
     private var baseUtcTimeMillis: Long? = null
     private var baseElapsedRealtime: Long? = null
+    private var baseStartTime: Long? = null
     override fun definition() = ModuleDefinition {
         Name("ExpoTrueTime")
 
@@ -47,12 +48,37 @@ class ExpoTrueTimeModule : Module() {
             return@Function getUpTime()
         }
 
+        Function("setBaseStartTime") {
+            return@Function setBaseStartTime()
+        }
 
+        Function("getElapsedTimeSinceStart") {
+            return@Function getElapsedTimeSinceStart()
+        }
     }
+
+    //------------- (individual needs)
 
     private fun getUpTime(): Long {
         return SystemClock.elapsedRealtime()
     }
+
+    private fun setBaseStartTime() {
+        baseStartTime = SystemClock.elapsedRealtime()
+    }
+
+    private fun getElapsedTimeSinceStart(): Long? {
+        return try {
+            val currentUptime = SystemClock.elapsedRealtime()
+            if(baseStartTime == null) return 0
+            currentUptime - baseStartTime!!
+        } catch(e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    //------------ (public)
 
     private fun getNtpTime(): String {
         val address = InetAddress.getByName("time.google.com")

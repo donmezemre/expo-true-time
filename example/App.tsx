@@ -4,6 +4,8 @@ import {
   setBaseUtcTime,
   getNtpTimeMs,
   getUpTime,
+  getElapsedTimeSinceStart,
+  setBaseStartTime,
 } from "expo-true-time";
 import { useEffect, useState } from "react";
 import { Button, View } from "react-native";
@@ -47,6 +49,19 @@ export default function App() {
           const upTime = getUpTime();
           console.log({ upTime, lastButtonPressDiff: upTime - last });
           setLast(upTime);
+        }}
+      />
+      <Button
+        title="setBaseStartTime"
+        onPress={() => {
+          setBaseStartTime();
+        }}
+      />
+      <Button
+        title="getElapsedTimeSinceStart"
+        onPress={() => {
+          const elapsedTimeSinceStart = getElapsedTimeSinceStart();
+          console.log({ elapsedTimeSinceStart });
         }}
       />
     </View>
